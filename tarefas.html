@@ -20,5 +20,5 @@ function renderTasks(){
   box.innerHTML=list.map(t=>'<div class="task-row"><button class="check '+(t.status==="completed"?"done":"")+'" onclick="toggleTask(\''+t.id+'\',\''+t.status+'\')"></button><div class="task-main"><div class="task-title">'+escapeHtml(t.title)+'</div><div class="task-meta">'+(t.due_date||"Sem prazo")+' · '+escapeHtml(t.responsible?.name||"Sem responsável")+'</div></div><span class="pill '+(t.priority||"medium")+'">'+({urgent:"Urgente",high:"Alta",medium:"Média",low:"Baixa"}[t.priority]||"Média")+'</span></div>').join("");
 }
 async function toggleTask(id,status){const next=status==="completed"?"pending":"completed";await supabaseClient.from("tasks").update({status:next,updated_at:new Date().toISOString()}).eq("id",id);await loadTasks();}
-function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
+function formatDate(value){if(!value)return "—";return new Date(value).toLocaleDateString("pt-BR")}\nfunction escapeHtml(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));}
 </script></body></html>
