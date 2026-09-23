@@ -12,11 +12,24 @@ async function loadDashboard(){
  document.getElementById("today-count").textContent=tasks.filter(t=>t.due_date===today&&t.status!=="completed"&&t.status!=="deprioritized").length;document.getElementById("done-count").textContent=tasks.filter(t=>t.status==="completed"&&t.updated_at>=week).length;document.getElementById("overdue-count").textContent=tasks.filter(t=>t.due_date&&t.due_date<today&&t.status!=="completed"&&t.status!=="deprioritized").length;document.getElementById("team-count").textContent=pr.count??0;
  const people=profiles.data||[];
  const openTasks=tasks.filter(t=>t.status!=="completed");
- const counts=people.map(p=>({name:p.name||"Sem nome",count:openTasks.filter(t=>t.responsible_id===p.id).length})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
- const unassigned=openTasks.filter(t=>!t.responsible_id).length;
- if(unassigned)counts.push({name:"Sem responsável",count:unassigned});
- const maxCount=Math.max(...counts.map(x=>x.count),1);
- document.getElementById("responsible-chart").innerHTML=counts.length?counts.map(x=>'<div style="margin-bottom:16px"><div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;font-size:14px"><span style="font-weight:600">'+esc(x.name)+'</span><strong>'+x.count+'</strong></div><div style="height:10px;background:rgba(91,100,70,.12);border-radius:999px;overflow:hidden"><div style="height:100%;width:'+Math.max(4,(x.count/maxCount)*100)+'%;background:#697653;border-radius:999px"></div></div></div>').join(""):'<p class="empty-state">Nenhuma tarefa em aberto.</p>';
+ const rows=people.map(p=>{
+   const mine=openTasks.filter(t=>t.responsible_id===p.id);
+   return {name:p.name||"Sem nome",urgent:mine.filter(t=>t.priority==="urgent").length,high:mine.filter(t=>t.priority==="high").length,medium:mine.filter(t=>t.priority==="medium"||!t.priority).length,low:mine.filter(t=>t.priority==="low").length,total:mine.length};
+ }).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
+ const unassigned=openTasks.filter(t=>!t.responsible_id);
+ if(unassigned.length)rows.push({name:"Sem responsável",urgent:unassigned.filter(t=>t.priority==="urgent").length,high:unassigned.filter(t=>t.priority==="high").length,medium:unassigned.filter(t=>t.priority==="medium"||!t.priority).length,low:unassigned.filter(t=>t.priority==="low").length,total:unassigned.length});
+ const maxCount=Math.max(...rows.map(x=>x.total),1);
+ const priorityLabel={urgent:"Urgente",high:"Alta",medium:"Média",low:"Baixa"};
+ document.getElementById("responsible-chart").innerHTML=rows.length?'<div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;font-size:12px">'+
+   '<span>🔴 Urgente</span><span>🟠 Alta</span><span>🟡 Média</span><span>🟢 Baixa</span></div>'+
+   rows.map(x=>{
+     const segments=[["urgent",x.urgent,"#a94a45"],["high",x.high,"#c17a45"],["medium",x.medium,"#b59a52"],["low",x.low,"#7c8b62"]];
+     return '<div style="margin-bottom:18px"><div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:7px;font-size:14px"><span style="font-weight:600">'+esc(x.name)+'</span><strong>'+x.total+'</strong></div><div title="'+x.name+' · '+x.total+' abertas" style="height:14px;background:rgba(91,100,70,.10);border-radius:999px;overflow:hidden;display:flex">'+
+       segments.map(s=>s[1]?'<div title="'+priorityLabel[s[0]]+': '+s[1]+'" style="height:100%;width:'+((s[1]/maxCount)*100)+'%;background:'+s[2]+';min-width:3px"></div>':'').join("")+
+       '</div><div style="display:flex;gap:12px;margin-top:5px;font-size:11px;color:#777">'+
+       segments.filter(s=>s[1]).map(s=>'<span>'+priorityLabel[s[0]]+': '+s[1]+'</span>').join("")+
+       '</div></div>';
+   }).join(""):'<p class="empty-state">Nenhuma tarefa em aberto.</p>';
  document.getElementById("dashboard-date").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date()).replace(/^./,m=>m.toUpperCase());
  const list=tasks.filter(t=>t.due_date===today&&t.status!=="completed"&&t.status!=="deprioritized").slice(0,5);
  document.getElementById("priority-list").innerHTML=list.length?list.map(t=>'<div class="task-row"><div class="task-main"><div class="task-title">'+esc(t.title)+'</div><div class="task-meta">'+esc(t.due_date||"Sem prazo")+'</div></div><span class="pill '+(t.priority||"medium")+'">'+({urgent:"Urgente",high:"Alta",medium:"Média",low:"Baixa"}[t.priority]||"Média")+'</span></div>').join(""):'<p class="empty-state">Nenhuma tarefa para hoje.</p>';
