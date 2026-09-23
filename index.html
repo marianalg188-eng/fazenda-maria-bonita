@@ -3,7 +3,11 @@
 <p class="section-sub">Tudo que está no nome de cada responsável e ainda não foi concluído.</p>
 <div id="responsible-chart" style="margin-top:18px"><p class="empty-state">Carregando…</p></div>
 </section>
-<section class="section-card"><div class="section-head"><h2>Prioridades de hoje</h2><a class="section-link" href="tarefas.html">Ver todas →</a></div><div id="priority-list"><p class="empty-state">Carregando…</p></div></section><div style="text-align:right;margin:18px 0"><a href="#" data-signout class="section-link">Sair →</a></div></main><nav class="bottom-nav"><a class="active" href="index.html"><span class="nav-icon">⌂</span>Início</a><a href="tarefas.html"><span class="nav-icon">☷</span>Tarefas</a><a href="equipe.html"><span class="nav-icon">♧</span>Equipe</a><a href="menu.html"><span class="nav-icon">☰</span>Menu</a></nav><script>
+<section class="section-card">
+<div class="section-head"><h2>Tarefas em aberto por Centro de custo</h2><a class="section-link" href="tarefas.html">Ver todas →</a></div>
+<p class="section-sub">Tudo que está em aberto, agrupado por Centro de custo e detalhado por Área.</p>
+<div id="cost-center-chart" style="margin-top:18px"><p class="empty-state">Carregando…</p></div>
+</section><section class="section-card"><div class="section-head"><h2>Prioridades de hoje</h2><a class="section-link" href="tarefas.html">Ver todas →</a></div><div id="priority-list"><p class="empty-state">Carregando…</p></div></section><div style="text-align:right;margin:18px 0"><a href="#" data-signout class="section-link">Sair →</a></div></main><nav class="bottom-nav"><a class="active" href="index.html"><span class="nav-icon">⌂</span>Início</a><a href="tarefas.html"><span class="nav-icon">☷</span>Tarefas</a><a href="equipe.html"><span class="nav-icon">♧</span>Equipe</a><a href="menu.html"><span class="nav-icon">☰</span>Menu</a></nav><script>
 async function loadDashboard(){
  const today=new Date().toISOString().slice(0,10);const start=new Date();start.setDate(start.getDate()-6);const week=start.toISOString().slice(0,10);
  const [tr,pr,profiles]=await Promise.all([supabaseClient.from("tasks").select("id,title,priority,status,due_date,updated_at,responsible_id").order("due_date",{ascending:true}),supabaseClient.from("profiles").select("id",{count:"exact",head:true}).eq("active",true),supabaseClient.from("profiles").select("id,name").eq("active",true).order("name")]);
@@ -30,6 +34,20 @@ async function loadDashboard(){
        segments.filter(s=>s[1]).map(s=>'<span>'+priorityLabel[s[0]]+': '+s[1]+'</span>').join("")+
        '</div></div>';
    }).join(""):'<p class="empty-state">Nenhuma tarefa em aberto.</p>';
+ const costGroups={};
+ openTasks.forEach(t=>{
+   const center=t.front||"Sem Centro de custo";
+   const area=t.category||"Sem Área";
+   if(!costGroups[center])costGroups[center]={total:0,areas:{}};
+   costGroups[center].total++;
+   costGroups[center].areas[area]=(costGroups[center].areas[area]||0)+1;
+ });
+ const costRows=Object.entries(costGroups).map(([name,v])=>({name,...v})).sort((a,b)=>b.total-a.total);
+ const maxCost=Math.max(...costRows.map(x=>x.total),1);
+ document.getElementById("cost-center-chart").innerHTML=costRows.length?costRows.map(x=>{
+   const areaRows=Object.entries(x.areas).sort((a,b)=>b[1]-a[1]);
+   return '<div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px"><span style="font-weight:600;font-size:14px">'+esc(x.name)+'</span><strong>'+x.total+'</strong></div><div style="height:12px;background:rgba(91,100,70,.10);border-radius:999px;overflow:hidden;margin-bottom:9px"><div style="height:100%;width:'+Math.max(4,(x.total/maxCost)*100)+'%;background:#697653;border-radius:999px"></div></div><div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding-left:2px">'+areaRows.map(a=>'<span style="font-size:11px;color:#777">'+esc(a[0])+': <b>'+a[1]+'</b></span>').join("")+'</div></div>';
+ }).join(""):'<p class="empty-state">Nenhuma tarefa em aberto.</p>';
  document.getElementById("dashboard-date").textContent=new Intl.DateTimeFormat("pt-BR",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(new Date()).replace(/^./,m=>m.toUpperCase());
  const list=tasks.filter(t=>t.due_date===today&&t.status!=="completed"&&t.status!=="deprioritized").slice(0,5);
  document.getElementById("priority-list").innerHTML=list.length?list.map(t=>'<div class="task-row"><div class="task-main"><div class="task-title">'+esc(t.title)+'</div><div class="task-meta">'+esc(t.due_date||"Sem prazo")+'</div></div><span class="pill '+(t.priority||"medium")+'">'+({urgent:"Urgente",high:"Alta",medium:"Média",low:"Baixa"}[t.priority]||"Média")+'</span></div>').join(""):'<p class="empty-state">Nenhuma tarefa para hoje.</p>';
