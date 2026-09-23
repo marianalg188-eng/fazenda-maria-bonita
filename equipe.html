@@ -1,15 +1,21 @@
 <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Fazenda Maria Bonita · Equipe</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="supabase-config.js"></script><script src="app.js"></script><script src="auth.js"></script></head><body><main class="shell"><header class="topbar"><a class="brand" href="index.html"><div class="brand-mark">❧</div><div class="brand-text"><b>Fazenda</b><span>Maria Bonita</span></div></a><div class="user-actions"><a class="new-btn" href="nova-tarefa.html"><span class="plus">+</span><span class="label">Nova tarefa</span></a></div></header><a class="back" href="index.html">← Voltar</a><h1 class="page-title">Equipe</h1><p class="page-sub">Pessoas cadastradas no sistema.</p><div class="member-list" id="member-list"><p class="empty-state">Carregando equipe…</p></div><div style="text-align:right;margin:18px 0"><a href="#" data-signout class="section-link">Sair →</a></div></main><nav class="bottom-nav"><a href="index.html"><span class="nav-icon">⌂</span>Início</a><a href="tarefas.html"><span class="nav-icon">☷</span>Tarefas</a><a class="active" href="equipe.html"><span class="nav-icon">♧</span>Equipe</a><a href="menu.html"><span class="nav-icon">☰</span>Menu</a></nav><script>
 async function loadTeam(){
  const box=document.getElementById("member-list");
- const {data:people,error}=await supabaseClient.from("profiles").select("id,name,email,role,function_name,active").order("name");
+ const {data:people,error}=await supabaseClient.from("profiles").select("id,name,email,role,function_name,active,avatar_path").order("name");
  if(error){box.innerHTML='<p class="empty-state">Não foi possível carregar a equipe.</p>';return}
  if(!people?.length){box.innerHTML='<p class="empty-state">Nenhum usuário cadastrado no Supabase.</p>';return}
  const {data:tasks}=await supabaseClient.from("tasks").select("responsible_id,status");
- box.innerHTML=people.map(p=>{
+ const cards=await Promise.all(people.map(async p=>{
    const open=(tasks||[]).filter(t=>t.responsible_id===p.id&&t.status!=="completed"&&t.status!=="cancelled").length;
    const role=p.function_name||(p.role==="admin"?"Administradora":"Equipe");
-   return '<div class="member"><div class="avatar">👤</div><div class="member-main"><b>'+esc(p.name)+'</b><span>'+esc(role)+'</span><small>'+esc(p.email||"")+'</small></div><div class="member-open"><b>'+open+'</b>tarefas abertas</div><span class="chevron">›</span></div>';
- }).join("");
+   let avatarHtml="👤";
+   if(p.avatar_path){
+     const u=await supabaseClient.storage.from("profile-avatars").createSignedUrl(p.avatar_path,3600);
+     if(u.data?.signedUrl) avatarHtml='<img src="'+esc(u.data.signedUrl)+'" style="width:100%;height:100%;object-fit:cover" alt="Foto de '+esc(p.name)+'">';
+   }
+   return '<div class="member"><div class="avatar" style="overflow:hidden">'+avatarHtml+'</div><div class="member-main"><b>'+esc(p.name)+'</b><span>'+esc(role)+'</span><small>'+esc(p.email||"")+'</small></div><div class="member-open"><b>'+open+'</b>tarefas abertas</div><span class="chevron">›</span></div>';
+ }));
+ box.innerHTML=cards.join("");
  initFarmApp();
 }
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
