@@ -86,6 +86,14 @@
 <nav class="bottom-nav"><a class="active" href="index.html"><span class="nav-icon">⌂</span>Início</a><a href="tarefas.html"><span class="nav-icon">☷</span>Tarefas</a><a href="equipe.html"><span class="nav-icon">♧</span>Equipe</a><a href="menu.html"><span class="nav-icon">☰</span>Menu</a></nav>
 
 <script>
+(function(){
+  const hash=new URLSearchParams(window.location.hash.slice(1));
+  if(hash.get("type")==="recovery"){
+    window.location.replace("reset-password.html"+window.location.hash);
+  }
+})();
+</script>
+<script>
 async function loadDashboard(){
  const today=new Date();const todayKey=today.toISOString().slice(0,10);const start=new Date(today);start.setDate(start.getDate()-6);const weekStart=start.toISOString().slice(0,10);
  const weekEndDate=new Date(today);weekEndDate.setDate(weekEndDate.getDate()+7);const weekEnd=weekEndDate.toISOString().slice(0,10);
